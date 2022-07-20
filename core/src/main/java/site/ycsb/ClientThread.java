@@ -33,6 +33,7 @@ public class ClientThread implements Runnable {
   private static boolean spinSleep;
   private DB db;
   private boolean dotransactions;
+  private boolean dodelete;
   private Workload workload;
   private int opcount;
   private double targetOpsPerMs;
@@ -50,16 +51,19 @@ public class ClientThread implements Runnable {
    *
    * @param db                   the DB implementation to use
    * @param dotransactions       true to do transactions, false to insert data
+   * @param dodelete             true to do deletion, false to insert data
    * @param workload             the workload to use
    * @param props                the properties defining the experiment
    * @param opcount              the number of operations (transactions or inserts) to do
    * @param targetperthreadperms target number of operations per thread per ms
    * @param completeLatch        The latch tracking the completion of all clients.
    */
-  public ClientThread(DB db, boolean dotransactions, Workload workload, Properties props, int opcount,
+  public ClientThread(DB db, boolean dotransactions, boolean dodelete,
+                      Workload workload, Properties props, int opcount,
                       double targetperthreadperms, CountDownLatch completeLatch) {
     this.db = db;
     this.dotransactions = dotransactions;
+    this.dodelete = dodelete;
     this.workload = workload;
     this.opcount = opcount;
     opsdone = 0;
@@ -114,7 +118,20 @@ public class ClientThread implements Runnable {
       sleepUntil(System.nanoTime() + randomMinorDelay);
     }
     try {
-      if (dotransactions) {
+      if (dodelete) {
+        long startTimeNanos = System.nanoTime();
+
+        while (((opcount == 0) || (opsdone < opcount)) && !workload.isStopRequested()) {
+
+          if (!workload.doDelete(db, workloadstate)) {
+            break;
+          }
+
+          opsdone++;
+
+          throttleNanos(startTimeNanos);
+        }
+      } else if (dotransactions) {
         long startTimeNanos = System.nanoTime();
 
         while (((opcount == 0) || (opsdone < opcount)) && !workload.isStopRequested()) {

@@ -140,6 +140,11 @@ public final class Client {
   public static final String DO_TRANSACTIONS_PROPERTY = "dotransactions";
 
   /**
+   * Whether or not this is the delete phase (delete) or not (load).
+   */
+  public static final String DO_DELETE_PROPERTY = "dodelete";
+
+  /**
    * Whether or not to show status during run.
    */
   public static final String STATUS_PROPERTY = "status";
@@ -405,11 +410,12 @@ public final class Client {
                                            CountDownLatch completeLatch) {
     boolean initFailed = false;
     boolean dotransactions = Boolean.valueOf(props.getProperty(DO_TRANSACTIONS_PROPERTY, String.valueOf(true)));
+    boolean dodelete = Boolean.valueOf(props.getProperty(DO_DELETE_PROPERTY, String.valueOf(false)));
 
     final List<ClientThread> clients = new ArrayList<>(threadcount);
     try (final TraceScope span = tracer.newScope(CLIENT_INIT_SPAN)) {
       int opcount;
-      if (dotransactions) {
+      if (dotransactions || dodelete) {
         opcount = Integer.parseInt(props.getProperty(OPERATION_COUNT_PROPERTY, "0"));
       } else {
         if (props.containsKey(INSERT_COUNT_PROPERTY)) {
@@ -439,8 +445,8 @@ public final class Client {
           ++threadopcount;
         }
 
-        ClientThread t = new ClientThread(db, dotransactions, workload, props, threadopcount, targetperthreadperms,
-            completeLatch);
+        ClientThread t = new ClientThread(db, dotransactions, dodelete,
+            workload, props, threadopcount, targetperthreadperms, completeLatch);
         t.setThreadId(threadid);
         t.setThreadCount(threadcount);
         clients.add(t);
@@ -565,6 +571,10 @@ public final class Client {
         props.setProperty(TARGET_PROPERTY, String.valueOf(ttarget));
         argindex++;
       } else if (args[argindex].compareTo("-load") == 0) {
+        props.setProperty(DO_TRANSACTIONS_PROPERTY, String.valueOf(false));
+        argindex++;
+      } else if (args[argindex].compareTo("-delete") == 0) {
+        props.setProperty(DO_DELETE_PROPERTY, String.valueOf(true));
         props.setProperty(DO_TRANSACTIONS_PROPERTY, String.valueOf(false));
         argindex++;
       } else if (args[argindex].compareTo("-t") == 0) {

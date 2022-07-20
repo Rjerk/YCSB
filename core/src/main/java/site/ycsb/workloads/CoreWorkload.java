@@ -637,7 +637,49 @@ public class CoreWorkload extends Workload {
 
       } else {
         System.err.println("Error inserting, not retrying any more. number of attempts: " + numOfRetries +
-            "Insertion Retry Limit: " + insertionRetryLimit);
+            ". Insertion Retry Limit: " + insertionRetryLimit);
+        break;
+
+      }
+    } while (true);
+
+    return null != status && status.isOk();
+  }
+
+    /**
+   * Do one delete operation. Because it will be called concurrently from multiple client threads,
+   * this function must be thread safe. However, avoid synchronized, or the threads will block waiting
+   * for each other, and it will be difficult to reach the target throughput. Ideally, this function would
+   * have no side effects other than DB operations.
+   */
+  @Override
+  public boolean doDelete(DB db, Object threadstate) {
+    int keynum = keysequence.nextValue().intValue();
+    String dbkey = CoreWorkload.buildKeyName(keynum, zeropadding, orderedinserts);
+
+    Status status;
+    int numOfRetries = 0;
+    do {
+      status = db.delete(table, dbkey);
+      if (null != status && status.isOk()) {
+        break;
+      }
+      // Retry if configured. Without retrying, the load process will fail
+      // even if one single insertion fails. User can optionally configure
+      // an insertion retry limit (default is 0) to enable retry.
+      if (++numOfRetries <= insertionRetryLimit) {
+        System.err.println("Retrying insertion, retry count: " + numOfRetries);
+        try {
+          // Sleep for a random number between [0.8, 1.2)*insertionRetryInterval.
+          int sleepTime = (int) (1000 * insertionRetryInterval * (0.8 + 0.4 * Math.random()));
+          Thread.sleep(sleepTime);
+        } catch (InterruptedException e) {
+          break;
+        }
+
+      } else {
+        System.err.println("Error inserting, not retrying any more. number of attempts: " + numOfRetries +
+            ". Insertion Retry Limit: " + insertionRetryLimit);
         break;
 
       }

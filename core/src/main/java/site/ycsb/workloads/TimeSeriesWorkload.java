@@ -707,6 +707,11 @@ public class TimeSeriesWorkload extends Workload {
   }
 
   @Override
+  public boolean doDelete(DB db, Object threadstate) {
+    return false;
+  }
+
+  @Override
   public boolean doTransaction(DB db, Object threadstate) {
     if (threadstate == null) {
       throw new IllegalStateException("Missing thread state.");

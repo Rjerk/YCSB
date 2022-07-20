@@ -48,6 +48,11 @@ COMMANDS = {
         "description" : "Execute the transaction phase",
         "main"        : "site.ycsb.Client",
     },
+    "delete" : {
+        "command"     : "-delete",
+        "description" : "Execute the delete phase",
+        "main"        : "site.ycsb.Client",
+    },
 }
 
 DATABASES = {

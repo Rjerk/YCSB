@@ -239,6 +239,14 @@ public class RestWorkload extends CoreWorkload {
     return false;
   }
 
+  /**
+   * Not required for Rest Clients as data population is service specific.
+   */
+  @Override
+  public boolean doDelete(DB db, Object threadstate) {
+    return false;
+  }
+
   @Override
   public boolean doTransaction(DB db, Object threadstate) {
     String operation = operationchooser.nextString();
